@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>季節互動遊戲 - 春天與夏天</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    font-family: "Microsoft JhengHei", "PingFang TC", "Heiti TC", sans-serif;
+    background: #222;
+    overflow: hidden;
+    user-select: none;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 16:9 舞台 */
+  .stage-wrap {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stage {
+    width: 1600px;
+    height: 900px;
+    transform-origin: center center;
+    background: linear-gradient(135deg, #fff9c4 0%, #b3e5fc 100%);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.4);
+  }
+
+  .page {
+    position: absolute;
+    inset: 0;
+    display: none;
+    padding: 30px 50px;
+    flex-direction: column;
+  }
+  .page.active { display: flex; }
+
+  /* 開始頁 */
+  #startPage {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  #startPage h1 {
+    font-size: 110px;
+    color: #e65100;
+    margin-bottom: 30px;
+    text-shadow: 4px 4px 0 #fff;
+  }
+  #startPage p {
+    font-size: 48px;
+    color: #4a4a4a;
+    margin-bottom: 60px;
+  }
+  .start-btn {
+    font-size: 56px;
+    padding: 30px 100px;
+    background: #ff9800;
+    color: white;
+    border: 8px solid #fff;
+    border-radius: 40px;
+    cursor: pointer;
+    box-shadow: 0 10px 0 #e65100;
+    transition: transform 0.1s;
+  }
+  .start-btn:hover { transform: scale(1.05); }
+  .start-btn:active { transform: translateY(5px); box-shadow: 0 5px 0 #e65100; }
+
+  /* 標題列 */
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-shrink: 0;
+  }
+  .progress {
+    background: white;
+    padding: 14px 32px;
+    border-radius: 25px;
+    font-size: 32px;
+    color: #1565c0;
+    border: 5px solid #64b5f6;
+  }
+  .header {
+    background: white;
+    padding: 18px 40px;
+    border-radius: 25px;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    border: 5px solid #ffb74d;
+    flex: 1;
+    margin-left: 25px;
+    text-align: center;
+  }
+  .header h2 {
+    font-size: 44px;
+    color: #d84315;
+  }
+  .sub {
+    font-size: 26px;
+    color: #6d4c41;
+    margin-top: 5px;
+  }
+
+  /* 主題圖 + 題目並排 */
+  .question-area {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 30px;
+    flex: 1;
+    min-height: 0;
+  }
+  .season-pic {
+    background: white;
+    border-radius: 30px;
+    padding: 18px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    border: 7px solid #fff;
+    display: flex;
+    flex-direction: column;
+  }
+  .season-pic svg {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    display: block;
+    border-radius: 22px;
+  }
+  .season-pic .season-label {
+    font-size: 44px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 18px;
+    flex-shrink: 0;
+  }
+  .season-pic.spring { border-color: #f8bbd0; }
+  .season-pic.spring .season-label { background: #fce4ec; color: #c2185b; }
+  .season-pic.summer { border-color: #ffe082; }
+  .season-pic.summer .season-label { background: #fff8e1; color: #ef6c00; }
+  .season-pic.autumn { border-color: #ffcc80; }
+  .season-pic.autumn .season-label { background: #fff3e0; color: #bf360c; }
+  .season-pic.winter { border-color: #b3e5fc; }
+  .season-pic.winter .season-label { background: #e1f5fe; color: #01579b; }
+
+  /* 右側內容 */
+  .right-side {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+  }
+  .card {
+    background: white;
+    border: 7px solid #fff;
+    border-radius: 28px;
+    padding: 12px;
+    cursor: pointer;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+  .card.correct {
+    border-color: #4caf50;
+    background: #c8e6c9;
+    pointer-events: none;
+  }
+  .card.wrong {
+    border-color: #f44336;
+    background: #ffcdd2;
+    animation: shake 0.4s;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+  .card .pic {
+    font-size: 110px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .card .label {
+    font-size: 36px;
+    color: #424242;
+    font-weight: bold;
+  }
+  .mark {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 56px;
+    display: none;
+  }
+  .card.correct .mark.tick { display: block; }
+  .card.wrong .mark.cross { display: block; }
+
+  .next-btn {
+    font-size: 40px;
+    padding: 18px 60px;
+    background: #4caf50;
+    color: white;
+    border: 6px solid #fff;
+    border-radius: 28px;
+    cursor: pointer;
+    box-shadow: 0 7px 0 #2e7d32;
+    margin-top: 18px;
+    align-self: flex-end;
+    visibility: hidden;
+  }
+  .next-btn.show { visibility: visible; }
+  .next-btn:active { transform: translateY(4px); box-shadow: 0 3px 0 #2e7d32; }
+
+  /* 完成頁 */
+  #endPage {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  #endPage h1 {
+    font-size: 110px;
+    color: #d81b60;
+    margin-bottom: 20px;
+  }
+  #endPage .stars {
+    font-size: 130px;
+    margin: 10px 0 25px;
+  }
+  #endPage p {
+    font-size: 44px;
+    color: #4a148c;
+    margin: 10px 0;
+  }
+  #endPage .restart {
+    margin-top: 35px;
+  }
+
+  /* 提示動畫 */
+  .feedback {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 140px;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    background: rgba(255,255,255,0.92);
+    padding: 25px 70px;
+    border-radius: 35px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  }
+  .feedback.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+</style>
+</head>
+<body>
+
+<div class="stage-wrap">
+<div class="stage" id="stage">
+
+  <!-- 開始頁 -->
+  <div id="startPage" class="page active">
+    <h1>🌸 季節遊戲 ☀️</h1>
+    <p>認識春天同夏天</p>
+    <button class="start-btn" onclick="goPage('q1Page')">開始遊戲 ▶</button>
+  </div>
+
+  <!-- 第一頁：春天 -->
+  <div id="q1Page" class="page">
+    <div class="top-row">
+      <div class="progress">第 1 題 / 共 4 題</div>
+      <div class="header">
+        <h2>🌸 下列哪些事物會在春天出現？</h2>
+        <div class="sub">請點選正確的圖片（可選多個）</div>
+      </div>
+    </div>
+    <div class="question-area">
+      <div class="season-pic spring">
+        <svg viewBox="0 0 300 320" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="skyS" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#b3e5fc"/>
+              <stop offset="100%" stop-color="#fce4ec"/>
+            </linearGradient>
+            <linearGradient id="grassS" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#aed581"/>
+              <stop offset="100%" stop-color="#7cb342"/>
+            </linearGradient>
+          </defs>
+          <rect width="300" height="220" fill="url(#skyS)"/>
+          <circle cx="245" cy="55" r="28" fill="#ffd54f"/>
+          <circle cx="245" cy="55" r="22" fill="#ffeb3b"/>
+          <ellipse cx="60" cy="50" rx="28" ry="14" fill="#fff"/>
+          <ellipse cx="80" cy="45" rx="22" ry="14" fill="#fff"/>
+          <ellipse cx="160" cy="80" rx="25" ry="12" fill="#fff"/>
+          <path d="M0,220 Q150,200 300,220 L300,320 L0,320 Z" fill="url(#grassS)"/>
+          <rect x="40" y="140" width="14" height="80" fill="#6d4c41"/>
+          <circle cx="47" cy="130" r="35" fill="#f8bbd0"/>
+          <circle cx="30" cy="120" r="22" fill="#f48fb1"/>
+          <circle cx="65" cy="115" r="22" fill="#f48fb1"/>
+          <circle cx="50" cy="105" r="20" fill="#fce4ec"/>
+          <g>
+            <circle cx="110" cy="260" r="6" fill="#fff"/>
+            <circle cx="106" cy="256" r="5" fill="#e91e63"/>
+            <circle cx="114" cy="256" r="5" fill="#e91e63"/>
+            <circle cx="106" cy="264" r="5" fill="#e91e63"/>
+            <circle cx="114" cy="264" r="5" fill="#e91e63"/>
+            <circle cx="110" cy="260" r="3" fill="#ffeb3b"/>
+          </g>
+          <g>
+            <circle cx="180" cy="270" r="6" fill="#fff"/>
+            <circle cx="176" cy="266" r="5" fill="#9c27b0"/>
+            <circle cx="184" cy="266" r="5" fill="#9c27b0"/>
+            <circle cx="176" cy="274" r="5" fill="#9c27b0"/>
+            <circle cx="184" cy="274" r="5" fill="#9c27b0"/>
+            <circle cx="180" cy="270" r="3" fill="#ffeb3b"/>
+          </g>
+          <g>
+            <circle cx="240" cy="265" r="6" fill="#fff"/>
+            <circle cx="236" cy="261" r="5" fill="#ff9800"/>
+            <circle cx="244" cy="261" r="5" fill="#ff9800"/>
+            <circle cx="236" cy="269" r="5" fill="#ff9800"/>
+            <circle cx="244" cy="269" r="5" fill="#ff9800"/>
+            <circle cx="240" cy="265" r="3" fill="#ffeb3b"/>
+          </g>
+          <g>
+            <circle cx="145" cy="295" r="6" fill="#fff"/>
+            <circle cx="141" cy="291" r="5" fill="#e91e63"/>
+            <circle cx="149" cy="291" r="5" fill="#e91e63"/>
+            <circle cx="141" cy="299" r="5" fill="#e91e63"/>
+            <circle cx="149" cy="299" r="5" fill="#e91e63"/>
+            <circle cx="145" cy="295" r="3" fill="#ffeb3b"/>
+          </g>
+          <g transform="translate(140,150)">
+            <ellipse cx="-8" cy="-4" rx="10" ry="8" fill="#ff7043"/>
+            <ellipse cx="8" cy="-4" rx="10" ry="8" fill="#ff7043"/>
+            <ellipse cx="-7" cy="6" rx="7" ry="6" fill="#ffab91"/>
+            <ellipse cx="7" cy="6" rx="7" ry="6" fill="#ffab91"/>
+            <ellipse cx="0" cy="0" rx="2" ry="10" fill="#3e2723"/>
+          </g>
+          <path d="M20,250 Q22,230 25,250" stroke="#558b2f" stroke-width="2" fill="none"/>
+          <path d="M85,290 Q87,275 90,290" stroke="#558b2f" stroke-width="2" fill="none"/>
+          <path d="M260,290 Q263,275 266,290" stroke="#558b2f" stroke-width="2" fill="none"/>
+        </svg>
+        <div class="season-label">🌸 春 天 🌸</div>
+      </div>
+      <div class="right-side">
+        <div class="grid" id="q1Grid"></div>
+        <button class="next-btn" id="next1" onclick="goPage('q2Page')">下一題 ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第二頁：夏天 -->
+  <div id="q2Page" class="page">
+    <div class="top-row">
+      <div class="progress">第 2 題 / 共 4 題</div>
+      <div class="header">
+        <h2>☀️ 下列哪些事物會在夏天出現？</h2>
+        <div class="sub">請點選正確的圖片（可選多個）</div>
+      </div>
+    </div>
+    <div class="question-area">
+      <div class="season-pic summer">
+        <svg viewBox="0 0 300 320" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="skyU" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4fc3f7"/>
+              <stop offset="100%" stop-color="#b3e5fc"/>
+            </linearGradient>
+            <linearGradient id="seaU" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#29b6f6"/>
+              <stop offset="100%" stop-color="#0288d1"/>
+            </linearGradient>
+            <linearGradient id="sandU" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fff59d"/>
+              <stop offset="100%" stop-color="#f9a825"/>
+            </linearGradient>
+          </defs>
+          <rect width="300" height="180" fill="url(#skyU)"/>
+          <g transform="translate(60,55)">
+            <g stroke="#ffeb3b" stroke-width="4" stroke-linecap="round">
+              <line x1="0" y1="-45" x2="0" y2="-32"/>
+              <line x1="0" y1="32" x2="0" y2="45"/>
+              <line x1="-45" y1="0" x2="-32" y2="0"/>
+              <line x1="32" y1="0" x2="45" y2="0"/>
+              <line x1="-32" y1="-32" x2="-23" y2="-23"/>
+              <line x1="23" y1="23" x2="32" y2="32"/>
+              <line x1="-32" y1="32" x2="-23" y2="23"/>
+              <line x1="23" y1="-23" x2="32" y2="-32"/>
+            </g>
+            <circle r="28" fill="#ffeb3b"/>
+            <circle r="22" fill="#ffd54f"/>
+            <circle cx="-7" cy="-4" r="2.5" fill="#5d4037"/>
+            <circle cx="7" cy="-4" r="2.5" fill="#5d4037"/>
+            <path d="M-8,5 Q0,12 8,5" stroke="#5d4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          </g>
+          <rect y="160" width="300" height="60" fill="url(#seaU)"/>
+          <path d="M0,170 Q30,165 60,170 T120,170 T180,170 T240,170 T300,170" stroke="#fff" stroke-width="2" fill="none" opacity="0.7"/>
+          <path d="M0,185 Q30,180 60,185 T120,185 T180,185 T240,185 T300,185" stroke="#fff" stroke-width="2" fill="none" opacity="0.5"/>
+          <path d="M0,210 Q150,195 300,215 L300,320 L0,320 Z" fill="url(#sandU)"/>
+          <path d="M250,210 Q255,160 252,120" stroke="#6d4c41" stroke-width="8" fill="none" stroke-linecap="round"/>
+          <g transform="translate(252,120)">
+            <path d="M0,0 Q-30,-15 -50,-5" stroke="#388e3c" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <path d="M0,0 Q30,-15 50,-5" stroke="#388e3c" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <path d="M0,0 Q-25,-30 -35,-45" stroke="#388e3c" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <path d="M0,0 Q25,-30 35,-45" stroke="#388e3c" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <path d="M0,0 Q-5,-30 0,-50" stroke="#388e3c" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <circle cx="-5" cy="-2" r="5" fill="#5d4037"/>
+            <circle cx="5" cy="-2" r="5" fill="#5d4037"/>
+          </g>
+          <line x1="120" y1="220" x2="120" y2="290" stroke="#5d4037" stroke-width="4"/>
+          <path d="M75,220 Q120,180 165,220 Z" fill="#e53935"/>
+          <path d="M75,220 Q90,205 105,220" fill="#fff"/>
+          <path d="M135,220 Q150,205 165,220" fill="#fff"/>
+          <g transform="translate(180,275)">
+            <path d="M-25,0 A25,25 0 0 1 25,0 Z" fill="#e53935"/>
+            <path d="M-25,0 A25,25 0 0 1 25,0" fill="none" stroke="#388e3c" stroke-width="4"/>
+            <circle cx="-10" cy="-8" r="2" fill="#212121"/>
+            <circle cx="5" cy="-10" r="2" fill="#212121"/>
+            <circle cx="15" cy="-5" r="2" fill="#212121"/>
+            <circle cx="-15" cy="-3" r="2" fill="#212121"/>
+          </g>
+          <g transform="translate(50,290)" fill="#ff7043">
+            <polygon points="0,-8 2,-2 8,-2 3,2 5,8 0,4 -5,8 -3,2 -8,-2 -2,-2"/>
+          </g>
+          <g transform="translate(220,300)">
+            <path d="M0,0 L-10,-12 L-5,-15 L0,-13 L5,-15 L10,-12 Z" fill="#f8bbd0" stroke="#ad1457" stroke-width="1"/>
+          </g>
+        </svg>
+        <div class="season-label">☀️ 夏 天 ☀️</div>
+      </div>
+      <div class="right-side">
+        <div class="grid" id="q2Grid"></div>
+        <button class="next-btn" id="next2" onclick="goPage('q3Page')">下一題 ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第三頁：秋天 -->
+  <div id="q3Page" class="page">
+    <div class="top-row">
+      <div class="progress">第 3 題 / 共 4 題</div>
+      <div class="header">
+        <h2>🍁 下列哪些事物會在秋天出現？</h2>
+        <div class="sub">請點選正確的圖片（可選多個）</div>
+      </div>
+    </div>
+    <div class="question-area">
+      <div class="season-pic autumn">
+        <svg viewBox="0 0 300 320" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="skyA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffcc80"/>
+              <stop offset="100%" stop-color="#ffe0b2"/>
+            </linearGradient>
+            <linearGradient id="grassA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#d7ccc8"/>
+              <stop offset="100%" stop-color="#a1887f"/>
+            </linearGradient>
+          </defs>
+          <!-- 黃昏天空 -->
+          <rect width="300" height="220" fill="url(#skyA)"/>
+          <!-- 太陽 -->
+          <circle cx="240" cy="60" r="26" fill="#ff8a65"/>
+          <circle cx="240" cy="60" r="20" fill="#ffab91"/>
+          <!-- 雲 -->
+          <ellipse cx="70" cy="55" rx="26" ry="12" fill="#fff3e0"/>
+          <ellipse cx="90" cy="48" rx="20" ry="11" fill="#fff3e0"/>
+          <!-- 地面 -->
+          <path d="M0,220 Q150,205 300,225 L300,320 L0,320 Z" fill="url(#grassA)"/>
+          <!-- 樹幹 -->
+          <rect x="40" y="130" width="16" height="95" fill="#5d4037"/>
+          <!-- 樹枝 -->
+          <line x1="48" y1="160" x2="25" y2="140" stroke="#5d4037" stroke-width="4"/>
+          <line x1="48" y1="170" x2="72" y2="150" stroke="#5d4037" stroke-width="4"/>
+          <!-- 紅黃葉 -->
+          <circle cx="48" cy="120" r="32" fill="#ef6c00"/>
+          <circle cx="28" cy="115" r="22" fill="#f57c00"/>
+          <circle cx="68" cy="110" r="22" fill="#d84315"/>
+          <circle cx="50" cy="100" r="20" fill="#ffa726"/>
+          <circle cx="40" cy="135" r="15" fill="#bf360c"/>
+          <!-- 地上落葉 -->
+          <g transform="translate(110,260) rotate(20)">
+            <path d="M0,0 Q-10,-8 0,-15 Q10,-8 0,0 Z" fill="#d84315"/>
+          </g>
+          <g transform="translate(150,280) rotate(-30)">
+            <path d="M0,0 Q-10,-8 0,-15 Q10,-8 0,0 Z" fill="#ef6c00"/>
+          </g>
+          <g transform="translate(200,265) rotate(45)">
+            <path d="M0,0 Q-10,-8 0,-15 Q10,-8 0,0 Z" fill="#f57c00"/>
+          </g>
+          <g transform="translate(240,290) rotate(10)">
+            <path d="M0,0 Q-10,-8 0,-15 Q10,-8 0,0 Z" fill="#bf360c"/>
+          </g>
+          <g transform="translate(95,295) rotate(-15)">
+            <path d="M0,0 Q-10,-8 0,-15 Q10,-8 0,0 Z" fill="#ffa726"/>
+          </g>
+          <!-- 飄落葉 -->
+          <g transform="translate(170,150) rotate(30)">
+            <path d="M0,0 Q-8,-6 0,-12 Q8,-6 0,0 Z" fill="#ef6c00"/>
+          </g>
+          <g transform="translate(220,180) rotate(-20)">
+            <path d="M0,0 Q-8,-6 0,-12 Q8,-6 0,0 Z" fill="#d84315"/>
+          </g>
+          <g transform="translate(130,200) rotate(50)">
+            <path d="M0,0 Q-8,-6 0,-12 Q8,-6 0,0 Z" fill="#f57c00"/>
+          </g>
+          <!-- 風 -->
+          <path d="M180,140 Q200,135 215,140" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+          <path d="M170,160 Q200,155 220,160" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.6"/>
+          <!-- 南瓜 -->
+          <g transform="translate(265,290)">
+            <ellipse cx="0" cy="0" rx="20" ry="16" fill="#ef6c00"/>
+            <path d="M-15,0 Q-15,-15 0,-15" stroke="#bf360c" stroke-width="2" fill="none"/>
+            <path d="M-5,0 Q-5,-15 5,-15" stroke="#bf360c" stroke-width="2" fill="none"/>
+            <path d="M15,0 Q15,-15 5,-15" stroke="#bf360c" stroke-width="2" fill="none"/>
+            <rect x="-2" y="-20" width="4" height="6" fill="#388e3c"/>
+          </g>
+        </svg>
+        <div class="season-label">🍁 秋 天 🍁</div>
+      </div>
+      <div class="right-side">
+        <div class="grid" id="q3Grid"></div>
+        <button class="next-btn" id="next3" onclick="goPage('q4Page')">下一題 ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第四頁：冬天 -->
+  <div id="q4Page" class="page">
+    <div class="top-row">
+      <div class="progress">第 4 題 / 共 4 題</div>
+      <div class="header">
+        <h2>❄️ 下列哪些事物會在冬天出現？</h2>
+        <div class="sub">請點選正確的圖片（可選多個）</div>
+      </div>
+    </div>
+    <div class="question-area">
+      <div class="season-pic winter">
+        <svg viewBox="0 0 300 320" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="skyW" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#90caf9"/>
+              <stop offset="100%" stop-color="#e1f5fe"/>
+            </linearGradient>
+            <linearGradient id="snowW" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#e1f5fe"/>
+            </linearGradient>
+          </defs>
+          <!-- 天空 -->
+          <rect width="300" height="220" fill="url(#skyW)"/>
+          <!-- 太陽（淡） -->
+          <circle cx="245" cy="55" r="22" fill="#fff9c4" opacity="0.85"/>
+          <!-- 雲 -->
+          <ellipse cx="70" cy="55" rx="28" ry="13" fill="#eceff1"/>
+          <ellipse cx="90" cy="48" rx="22" ry="13" fill="#eceff1"/>
+          <ellipse cx="170" cy="80" rx="25" ry="11" fill="#eceff1"/>
+          <!-- 雪花飄落 -->
+          <g fill="#fff" stroke="#b3e5fc" stroke-width="0.5">
+            <text x="50" y="100" font-size="16">❄</text>
+            <text x="120" y="130" font-size="14">❄</text>
+            <text x="200" y="110" font-size="18">❄</text>
+            <text x="160" y="170" font-size="14">❄</text>
+            <text x="80" y="180" font-size="16">❄</text>
+            <text x="240" y="160" font-size="14">❄</text>
+            <text x="30" y="160" font-size="14">❄</text>
+            <text x="270" y="200" font-size="14">❄</text>
+          </g>
+          <!-- 雪地 -->
+          <path d="M0,220 Q150,200 300,220 L300,320 L0,320 Z" fill="url(#snowW)"/>
+          <!-- 光禿樹 -->
+          <rect x="42" y="140" width="12" height="85" fill="#4e342e"/>
+          <line x1="48" y1="160" x2="25" y2="135" stroke="#4e342e" stroke-width="4" stroke-linecap="round"/>
+          <line x1="48" y1="155" x2="72" y2="130" stroke="#4e342e" stroke-width="4" stroke-linecap="round"/>
+          <line x1="48" y1="175" x2="20" y2="170" stroke="#4e342e" stroke-width="3" stroke-linecap="round"/>
+          <line x1="48" y1="170" x2="78" y2="165" stroke="#4e342e" stroke-width="3" stroke-linecap="round"/>
+          <!-- 樹上積雪 -->
+          <ellipse cx="25" cy="135" rx="6" ry="3" fill="#fff"/>
+          <ellipse cx="72" cy="130" rx="6" ry="3" fill="#fff"/>
+          <!-- 雪人 -->
+          <g transform="translate(170,250)">
+            <!-- 身 -->
+            <circle cx="0" cy="0" r="28" fill="#fff" stroke="#b3e5fc" stroke-width="1.5"/>
+            <!-- 頭 -->
+            <circle cx="0" cy="-35" r="20" fill="#fff" stroke="#b3e5fc" stroke-width="1.5"/>
+            <!-- 帽 -->
+            <rect x="-15" y="-58" width="30" height="6" fill="#d32f2f"/>
+            <rect x="-12" y="-72" width="24" height="14" fill="#d32f2f"/>
+            <!-- 眼 -->
+            <circle cx="-6" cy="-37" r="2" fill="#212121"/>
+            <circle cx="6" cy="-37" r="2" fill="#212121"/>
+            <!-- 鼻（紅蘿蔔） -->
+            <polygon points="0,-32 8,-30 0,-28" fill="#ff6f00"/>
+            <!-- 嘴 -->
+            <circle cx="-4" cy="-25" r="1" fill="#212121"/>
+            <circle cx="0" cy="-24" r="1" fill="#212121"/>
+            <circle cx="4" cy="-25" r="1" fill="#212121"/>
+            <!-- 鈕扣 -->
+            <circle cx="0" cy="-8" r="2.5" fill="#5d4037"/>
+            <circle cx="0" cy="2" r="2.5" fill="#5d4037"/>
+            <circle cx="0" cy="12" r="2.5" fill="#5d4037"/>
+            <!-- 手（樹枝） -->
+            <line x1="-25" y1="-5" x2="-45" y2="-15" stroke="#4e342e" stroke-width="3" stroke-linecap="round"/>
+            <line x1="25" y1="-5" x2="45" y2="-15" stroke="#4e342e" stroke-width="3" stroke-linecap="round"/>
+            <!-- 頸巾 -->
+            <rect x="-18" y="-22" width="36" height="6" fill="#1976d2"/>
+            <rect x="10" y="-22" width="6" height="20" fill="#1976d2"/>
+          </g>
+          <!-- 地上雪堆 -->
+          <ellipse cx="60" cy="290" rx="35" ry="10" fill="#fff" opacity="0.9"/>
+          <ellipse cx="260" cy="295" rx="40" ry="12" fill="#fff" opacity="0.9"/>
+        </svg>
+        <div class="season-label">❄️ 冬 天 ❄️</div>
+      </div>
+      <div class="right-side">
+        <div class="grid" id="q4Grid"></div>
+        <button class="next-btn" id="next4" onclick="goPage('endPage')">完成 ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 完成頁 -->
+  <div id="endPage" class="page">
+    <h1>🎉 完成喇！🎉</h1>
+    <div class="stars">⭐ ⭐ ⭐</div>
+    <p>你做得非常好！</p>
+    <p>你已經認識咗春、夏、秋、冬四季嘅特徵 👏</p>
+    <button class="start-btn restart" onclick="restart()">再玩一次 🔄</button>
+  </div>
+
+  <!-- 答對/答錯提示 -->
+  <div class="feedback" id="feedback"></div>
+
+</div>
+</div>
+
+<script>
+  // 自動將 1600x900 舞台縮放至視窗大小
+  function fitStage() {
+    const stage = document.getElementById('stage');
+    const sx = window.innerWidth / 1600;
+    const sy = window.innerHeight / 900;
+    const s = Math.min(sx, sy);
+    stage.style.transform = `scale(${s})`;
+  }
+  window.addEventListener('resize', fitStage);
+  window.addEventListener('load', fitStage);
+  fitStage();
+
+  // 春天題目
+  const q1Items = [
+    { pic: '🌸', label: '花朵', correct: true },
+    { pic: '❄️', label: '雪', correct: false },
+    { pic: '🍂', label: '黃葉', correct: false },
+    { pic: '🌱', label: '綠草', correct: true },
+    { pic: '🐛', label: '昆蟲', correct: true },
+    { pic: '🌧️', label: '下雨', correct: true }
+  ];
+
+  // 夏天題目
+  const q2Items = [
+    { pic: '👙', label: '泳衣', correct: true },
+    { pic: '🍦', label: '雪糕', correct: true },
+    { pic: '❄️', label: '雪', correct: false },
+    { pic: '🧥', label: '毛衣', correct: false },
+    { pic: '👕', label: '短袖衫', correct: true },
+    { pic: '🩳', label: '短褲', correct: true }
+  ];
+
+  // 秋天題目 - 正確：紅葉、黃葉、月餅、風箏；錯誤：花朵、西瓜
+  const q3Items = [
+    { pic: '🍁', label: '紅葉', correct: true },
+    { pic: '🍂', label: '黃葉', correct: true },
+    { pic: '🌸', label: '花朵', correct: false },
+    { pic: '🥮', label: '月餅', correct: true },
+    { pic: '🪁', label: '風箏', correct: true },
+    { pic: '🍉', label: '西瓜', correct: false }
+  ];
+
+  // 冬天題目 - 正確：雪、雪人、毛衣、頸巾；錯誤：泳衣、蝴蝶
+  const q4Items = [
+    { pic: '❄️', label: '雪', correct: true },
+    { pic: '⛄', label: '雪人', correct: true },
+    { pic: '👙', label: '泳衣', correct: false },
+    { pic: '🧥', label: '毛衣', correct: true },
+    { pic: '🧣', label: '頸巾', correct: true },
+    { pic: '🦋', label: '蝴蝶', correct: false }
+  ];
+
+  function buildGrid(gridId, items, nextBtnId) {
+    const grid = document.getElementById(gridId);
+    grid.innerHTML = '';
+    let totalCorrect = items.filter(i => i.correct).length;
+    let foundCorrect = 0;
+
+    items.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="pic">${item.pic}</div>
+        <div class="label">${item.label}</div>
+        <div class="mark tick">✅</div>
+        <div class="mark cross">❌</div>
+      `;
+      card.onclick = () => {
+        if (card.classList.contains('correct')) return;
+        if (item.correct) {
+          card.classList.remove('wrong');
+          card.classList.add('correct');
+          showFeedback('😊 答啱喇！', '#4caf50');
+          foundCorrect++;
+          if (foundCorrect === totalCorrect) {
+            setTimeout(() => {
+              document.getElementById(nextBtnId).classList.add('show');
+            }, 600);
+          }
+        } else {
+          card.classList.add('wrong');
+          showFeedback('😅 再試吓', '#f44336');
+          setTimeout(() => card.classList.remove('wrong'), 800);
+        }
+      };
+      grid.appendChild(card);
+    });
+  }
+
+  function showFeedback(text, color) {
+    const fb = document.getElementById('feedback');
+    fb.textContent = text;
+    fb.style.color = color;
+    fb.classList.add('show');
+    setTimeout(() => fb.classList.remove('show'), 800);
+  }
+
+  function goPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (id === 'q1Page') buildGrid('q1Grid', q1Items, 'next1');
+    if (id === 'q2Page') buildGrid('q2Grid', q2Items, 'next2');
+    if (id === 'q3Page') buildGrid('q3Grid', q3Items, 'next3');
+    if (id === 'q4Page') buildGrid('q4Grid', q4Items, 'next4');
+  }
+
+  function restart() {
+    ['next1','next2','next3','next4'].forEach(id => {
+      document.getElementById(id).classList.remove('show');
+    });
+    goPage('startPage');
+  }
+</script>
+
+</body>
+</html>
